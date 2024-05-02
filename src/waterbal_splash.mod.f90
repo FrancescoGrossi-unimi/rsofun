@@ -32,6 +32,7 @@ module md_waterbal
   real :: keps              ! obliquity for 2000 CE, degrees (Berger, 1978)
   real :: kw                ! entrainment factor (Lhomme, 1997; Priestley & Taylor, 1972)
   real :: komega            ! longitude of perihelion for 2000 CE, degrees (Berger, 1978)
+  real :: ksoil             ! parameter for non-linear equal to - ln(1 - y) / x = 0.03
 
   !----------------------------------------------------------------
   ! MODULE-SPECIFIC, PRIVATE VARIABLES
@@ -73,7 +74,7 @@ contains
     do lu=1,nlu
 
       ! Calculate evaporative supply rate, mm/h
-      sw = kCw * tile(lu)%soil%phy%wcont / tile(lu)%soil%params%whc
+      sw = kCw * (1 - exp(ksoil * tile(lu)%soil%phy%wcont))
 
       !---------------------------------------------------------
       ! Canopy transpiration and soil evaporation
@@ -561,6 +562,8 @@ contains
     
     ! longitude of perihelion for 2000 CE, degrees (Berger, 1978)
     komega   = 283.0
+
+    ksoil = 0.03
 
     ! maximum snow melting rate (mm d-1) (Orth et al., 2013)
     maxmeltrate = 3.0
