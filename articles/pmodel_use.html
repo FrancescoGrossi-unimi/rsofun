@@ -19,12 +19,10 @@
 <!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script><!-- headroom.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
 <script src="../pkgdown.js"></script><!-- geco --><link href="../geco.css" rel="stylesheet">
 <meta property="og:title" content="P-model usage">
-<meta property="og:description" content="rsofun">
-<meta name="twitter:card" content="summary">
 <!-- Mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/MathJax.js" async integrity="sha256-nlrDrBTHxJJlDDX22AS33xYI1OJHnGMDhiYMSe2U0e0=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.6/config/TeX-AMS-MML_HTMLorMML.js" async integrity="sha256-4zys9A4hMQmtq2EUL+JRoXc0NZi8jVJMzb8onewOaSQ=" crossorigin="anonymous"></script>
 </head>
 <body data-spy="scroll" data-target="#toc">
-    
+
 
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -45,7 +43,7 @@
         <a class="external-link hidden-md hidden-lg" href="https://geco-group.org/">
           <img src="https://raw.githubusercontent.com/computationales/GECO_template/main/geco_logo_white_small.png" id="hexlogo" alt="GECO"></a>
         <a class="navbar-brand" href="../index.html">
-           <i>rsofun <small>v4.4.1</small></i>
+           <i>rsofun <small>v5.0.0.9000</small></i>
         </a>
       </div>
     </div>
@@ -55,29 +53,8 @@
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    Articles
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="../articles/biomee_use.html">BiomeE usage</a>
-    </li>
-    <li>
-      <a href="../articles/data_format.html">P-model data format</a>
-    </li>
-    <li>
-      <a href="../articles/new_cost_function.html">Parameter calibration and cost functions</a>
-    </li>
-    <li>
-      <a href="../articles/pmodel_use.html">P-model usage</a>
-    </li>
-    <li>
-      <a href="../articles/sensitivity_analysis.html">Sensitivity analysis and calibration interpretation</a>
-    </li>
-  </ul>
+  <a href="../articles/index.html">Articles</a>
 </li>
 <li>
   <a href="../news/index.html">Changelog</a>
@@ -85,7 +62,7 @@
         <li>
   <a href="https://github.com/geco-bern/rsofun/" class="external-link">
     <span class="fab fa-github fa-lg"></span>
-     
+
   </a>
 </li>
       </ul>
@@ -96,7 +73,7 @@
 </div>
 <!--/.navbar -->
 
-      
+
 
       </header><div class="row">
   <div class="col-md-9 contents">
@@ -106,22 +83,23 @@
 Josefa Arán</h4>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/geco-bern/rsofun/blob/HEAD/vignettes/pmodel_use.Rmd" class="external-link"><code>vignettes/pmodel_use.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/geco-bern/rsofun/blob/master/vignettes/pmodel_use.Rmd" class="external-link"><code>vignettes/pmodel_use.Rmd</code></a></small>
       <div class="hidden name"><code>pmodel_use.Rmd</code></div>
 
     </div>
 
     
     
-<p>The <code>rsofun</code> package and framework includes two main
-models. The <code>pmodel</code> and <code>biomee</code> (which in part
-relies on P-model components). Here we give a short example on how to
-run the <code>pmodel</code> on the included demo datasets to familiarize
-yourself with both the data structure and the outputs.</p>
+<p>The <code>rsofun</code> package and framework includes two distinct
+simulation models. The <code>p-model</code> and <code>biomee</code>
+(which in part relies on p-model component). Here we give a short
+example on how to run the <code>p-model</code> on the included demo
+datasets to familiarize yourself with both the data structure and the
+outputs.</p>
 <div class="section level2">
 <h2 id="demo-data">Demo data<a class="anchor" aria-label="anchor" href="#demo-data"></a>
 </h2>
-<p>The package includes two demo datasets to run and validate pmodel
+<p>The package includes two demo datasets to run and validate p-model
 output using GPP observations. These files can be directly loaded into
 your workspace by typing:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
@@ -132,9 +110,8 @@ your workspace by typing:</p>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 4</span></span></span>
 <span><span class="co">#&gt;   sitename params_siml       site_info        forcing              </span></span>
 <span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>               </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> FR-Pue   <span style="color: #949494;">&lt;tibble [1 × 11]&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 4]&gt;</span> <span style="color: #949494;">&lt;tibble [2,190 × 13]&gt;</span></span></span></code></pre></div>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> FR-Pue   <span style="color: #949494;">&lt;tibble [1 × 11]&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 4]&gt;</span> <span style="color: #949494;">&lt;tibble [2,190 × 13]&gt;</span></span></span>
+<span></span>
 <span><span class="va">p_model_validation</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 2</span></span></span>
 <span><span class="co">#&gt;   sitename data                </span></span>
@@ -145,7 +122,7 @@ about data structure, variable names, and their meaning and units can be
 found in the reference pages of <code>p_model_drivers</code> and
 <code>p_model_validation</code>. We can use these data to run the model,
 together with observations of GPP we can also calibrate
-<code>pmodel</code> parameters.</p>
+<code>p-model</code> parameters.</p>
 <p>Another two datasets are provided as an example to validate the model
 against leaf traits data, rather than fluxes. Measurements of Vcmax25
 (aggregated over species) for a subset of 4 sites from the GlobResp
@@ -155,7 +132,7 @@ for the P-model is given in <code>p_model_drivers_vcmax25</code>. Since
 leaf traits are only measured once per site, the forcing used is a
 single year of average climate (the average measurements between 2001
 and 2015 on each day of the year).</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p_model_drivers_vcmax25</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 4</span></span></span>
 <span><span class="co">#&gt;   sitename             params_siml       site_info        forcing            </span></span>
@@ -163,9 +140,8 @@ and 2015 on each day of the year).</p>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> Reichetal_Colorado   <span style="color: #949494;">&lt;tibble [1 × 11]&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 6]&gt;</span> <span style="color: #949494;">&lt;tibble [365 × 13]&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> Reichetal_New_Mexico <span style="color: #949494;">&lt;tibble [1 × 11]&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 6]&gt;</span> <span style="color: #949494;">&lt;tibble [365 × 13]&gt;</span></span></span>
 <span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> Reichetal_Venezuela  <span style="color: #949494;">&lt;tibble [1 × 11]&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 6]&gt;</span> <span style="color: #949494;">&lt;tibble [365 × 13]&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Reichetal_Wisconsin  <span style="color: #949494;">&lt;tibble [1 × 11]&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 6]&gt;</span> <span style="color: #949494;">&lt;tibble [365 × 13]&gt;</span></span></span></code></pre></div>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> Reichetal_Wisconsin  <span style="color: #949494;">&lt;tibble [1 × 11]&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 6]&gt;</span> <span style="color: #949494;">&lt;tibble [365 × 13]&gt;</span></span></span>
+<span></span>
 <span><span class="va">p_model_validation_vcmax25</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 4 × 2</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># Groups:   sitename [4]</span></span></span>
@@ -187,7 +163,7 @@ datasets. The workflow is exactly the same for leaf traits data.</p>
 <code><a href="../reference/runread_pmodel_f.html">runread_pmodel_f()</a></code>. This function takes the nested data
 structure and runs the model site by site, returning nested model output
 results matching the input drivers.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># define model parameter values from previous</span></span>
 <span><span class="co"># work</span></span>
 <span><span class="va">params_modl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -212,7 +188,7 @@ results matching the input drivers.</p>
 </h3>
 <p>We can now visualize both the model output and the measured values
 together.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load libraries for plotting</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyr.tidyverse.org" class="external-link">tidyr</a></span><span class="op">)</span></span>
@@ -262,7 +238,7 @@ together.</p>
 <p>To optimize new parameters based upon driver data and a validation
 dataset we must first specify an optimization strategy and settings, as
 well as a cost function and parameter ranges.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">settings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  method              <span class="op">=</span> <span class="st">"GenSA"</span>,</span>
 <span>  metric              <span class="op">=</span> <span class="va">cost_rmse_pmodel</span>,</span>
@@ -300,7 +276,7 @@ observations specified. Extra arguments for the cost function (like what
 variable should be used as target to compute the root mean squared error
 (RMSE) and previous values for the parameters that aren’t calibrated,
 which are needed to run the P-model).</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># calibrate the model and optimize free parameters</span></span>
 <span><span class="va">pars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/calib_sofun.html">calib_sofun</a></span><span class="op">(</span></span>
 <span>    drivers <span class="op">=</span> <span class="va">p_model_drivers</span>,  </span>
@@ -314,7 +290,7 @@ which are needed to run the P-model).</p>
 <p>When successful the optimized parameters can be used to run
 subsequent modelling efforts, in this case slightly improving the model
 fit over a more global parameter set.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Update the parameter list with calibrated value</span></span>
 <span><span class="va">params_modl</span><span class="op">$</span><span class="va">kphio</span> <span class="op">&lt;-</span> <span class="va">pars</span><span class="op">$</span><span class="va">par</span><span class="op">[</span><span class="st">"kphio"</span><span class="op">]</span></span>
 <span></span>
@@ -365,9 +341,7 @@ fit over a more global parameter set.</p>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
 
-        <nav id="toc" data-toggle="toc"><h2 data-toc-skip>Contents</h2>
-    </nav>
-</div>
+      </div>
 
 </div>
 
@@ -415,10 +389,10 @@ fit over a more global parameter set.</p>
       </footer>
 </div>
 
-  
 
 
-  
+
+
 
   </body>
 </html>
