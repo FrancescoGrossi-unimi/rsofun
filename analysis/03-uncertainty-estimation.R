@@ -23,7 +23,7 @@ set.seed(2023)
 
 # Sample parameter values from the posterior distribution
 samples_par <- getSample(par_calib$mod,
-                         thin = 46,              # get 600 samples in total
+                         thin = 60,              # get 600 samples in total
                          whichParameters = 1:4) |>
   as.data.frame() |>
   dplyr::mutate(mcmc_id = 1:n()) |>
@@ -39,9 +39,9 @@ run_pmodel <- function(sample_par){
     par =  list(                      # copied from par_fixed above
       kphio = sample_par$kphio,
       kphio_par_a = -0.0025,
-      kphio_par_b = 20,
+      kphio_par_b = sample_par$kphio_par_b,
       soilm_thetastar    = 0.6*240,
-      soilm_betao        = sample_par$soilm_betao,
+      soilm_betao        = 0.2,
       beta_unitcostratio = 146.0,
       rd_to_vcmax        = 0.014,
       tau_acclim         = 30.0,
@@ -51,7 +51,7 @@ run_pmodel <- function(sample_par){
   # return modelled GPP and prediction for a new GPP observation
   gpp <- out$data[[1]][, "gpp"]
   data.frame(gpp = gpp, 
-             gpp_pred = gpp + rnorm(n = length(gpp), mean = 0, 
+             gpp_pred = rnorm(n = length(gpp), mean = gpp,
                                     sd = sample_par$err_gpp),
              date = out$data[[1]][, "date"])
 }
@@ -66,7 +66,7 @@ pmodel_runs <- samples_par |>
   # compute quantiles for each day
   dplyr::summarise(
     gpp_q05 = quantile(gpp, 0.05, na.rm = TRUE),
-    gpp = quantile(gpp, 0.5, na.rm = TRUE),          # get median
+    gpp_q50 = quantile(gpp, 0.5, na.rm = TRUE),          # get median
     gpp_q95 = quantile(gpp, 0.95, na.rm = TRUE),
     gpp_pred_q05 = quantile(gpp_pred, 0.05, na.rm = TRUE),
     gpp_pred_q95 = quantile(gpp_pred, 0.95, na.rm = TRUE)
@@ -74,37 +74,39 @@ pmodel_runs <- samples_par |>
 
 # Plot the credible intervals computed above
 # for the first year only
-plot_gpp_error <- ggplot(data = pmodel_runs |>
-                           dplyr::slice(1:365) |>
-                           dplyr::left_join(
-                             # Merge GPP validation data (first year)
-                             p_model_validation$data[[1]][1:365, ] |>
-                               dplyr::rename(gpp_obs = gpp),
-                             by = "date")
-) +             # Plot only first year
+data_to_plot <- pmodel_runs |>
+  # Plot only first year
+  dplyr::slice(1:365) |>
+  dplyr::left_join(
+    # Merge GPP validation data (first year)
+    p_model_validation$data[[1]][1:365, ] |>
+      dplyr::rename(gpp_obs = gpp),
+    by = "date")
+
+plot_gpp_error <- ggplot(data = data_to_plot) +
   geom_ribbon(
-    aes(ymin = gpp_pred_q05, 
+    aes(ymin = gpp_pred_q05,
         ymax = gpp_pred_q95,
         x = date,
-        fill = "Model uncertainty")) +
+        fill = "Model uncertainty"
+    )) +
   geom_ribbon(
     aes(ymin = gpp_q05, 
         ymax = gpp_q95,
         x = date,
-        fill = "Parameter uncertainty")) +
-
-  geom_line(
-    aes(
-      date,
-      gpp,
-      color = "Predictions"
-    )
+        fill = "Parameter uncertainty"
+    )) +
+  # Include observations in the plot
+  geom_point(
+    aes(x = date,
+        y = gpp_obs,
+        color = "Observations"
+    ),
   ) +
   geom_line(
-    aes(
-      date,
-      gpp_obs,
-      color = "Observations"
+    aes(x = date,
+        y = gpp_q50,
+        color = "Predictions"
     )
   ) +
   theme_classic() +
@@ -115,20 +117,19 @@ plot_gpp_error <- ggplot(data = pmodel_runs |>
     y = expression(paste("GPP (g C m"^-2, "s"^-1, ")"))
   )
 
-# Include observations in the plot
-plot_gpp_error <- plot_gpp_error +  
-  scale_color_manual(name = "",
+plot_gpp_error <- plot_gpp_error +
+  scale_color_manual(NULL,
                      breaks = c("Observations",
-                                "Predictions",
-                                "Non-calibrated predictions"),
-                     values = c(t_col("black", 10),
-                                t_col("#E69F00", 10),
-                                t_col("#56B4E9", 10))) +
-  scale_fill_manual(name = "",
+                                "Predictions"),
+                     values = c(t_col("black", 0),
+                                t_col("tomato", 0))) +
+  scale_fill_manual(NULL,
                     breaks = c("Model uncertainty",
                                "Parameter uncertainty"),
-                    values = c(t_col("#E69F00", 60),
-                               t_col("#009E73", 40)))
+                    values = c(t_col("tomato", 50),
+                               t_col("#1b9e77", 0)))
+plot_gpp_error
 
-# ggsave("./analysis/paper_results_files/gpp_predictions_observations.pdf", plot = plot_gpp_error, width = 6, height = 5)
-# ggsave("./analysis/paper_results_files/gpp_predictions_observations.png", plot = plot_gpp_error, width = 6, height = 5)
+settings_string <- get_settings_str(par_calib)
+ggsave(paste0("./analysis/paper_results_files/",settings_string,"_gpp_predictions_observations.pdf"), plot = plot_gpp_error, width = 6, height = 5)
+ggsave(paste0("./analysis/paper_results_files/",settings_string,"_gpp_predictions_observations.png"), plot = plot_gpp_error, width = 6, height = 5)

@@ -1,10 +1,10 @@
-#' Run the P-model
+#' Run P-model
 #'
-#' Runs the P-model and loads output in once.
+#' Runs P-model for multiple sites.
 #'
 #' @param drivers A nested data frame with one row for each site and columns
-#'  named according to the arguments of function \code{\link{run_pmodel_f_bysite}},
-#'  namely \code{sitename, params_siml, site_info} and \code{forcing}.
+#' named according to the arguments of function \code{\link{runread_pmodel_f}}.
+#' Namely \code{sitename, params_siml, site_info} and \code{forcing}.
 #' @param par A named list of free (calibratable) model parameters.
 #' \describe{
 #'   \item{kphio}{The quantum yield efficiency at optimal temperature \eqn{\varphi_0}, 
@@ -29,8 +29,8 @@
 #'   \item{kc_jmax}{Parameter for Jmax cost ratio (corresponding to c\eqn{^*} in
 #'   Stocker et al. 2020 GMD).} 
 #' }
-#' @param makecheck A logical specifying whether checks are performed to verify
-#'  forcings. Defaults to \code{TRUE}.
+#' @param makecheck A logical specifying whether checks are performed 
+#'  to verify forcings and model parameters. \code{TRUE} by default.
 #' @param parallel A logical specifying whether simulations are to be
 #'  parallelised (sending data from a certain number of sites to each core).
 #'  Defaults to \code{FALSE}.
@@ -40,7 +40,9 @@
 #' @return A data frame (tibble) with one row for each site, site information 
 #' stored in the nested column \code{site_info} and outputs stored in the nested 
 #' column \code{data}. See \code{\link{run_pmodel_f_bysite}} for a detailed 
-#' description of the outputs.
+#' description of the outputs. 
+#' Example outputs are provided as \code{\link{biomee_p_model_output}} and
+#' \code{\link{biomee_gs_leuning_output}}.
 #' @export
 #' 
 #' @details Depending on the input model parameters, it's possible to run the 
@@ -94,13 +96,16 @@
 #' output <- rsofun::runread_pmodel_f(
 #'   drivers = rsofun::p_model_drivers,
 #'   par = params_modl)
+#' output_vcmax25 <- rsofun::runread_pmodel_f(
+#'   drivers = rsofun::p_model_drivers_vcmax25,
+#'   par = params_modl)
 
 runread_pmodel_f <- function(
-  drivers,
-  par,
-  makecheck = TRUE,
-  parallel = FALSE,
-  ncores = 1){
+    drivers,
+    par,
+    makecheck = TRUE,
+    parallel = FALSE,
+    ncores = 1){
   
   # predefine variables for CRAN check compliance
   sitename <- params_siml <- site_info <-
@@ -174,9 +179,9 @@ runread_pmodel_f <- function(
     df_out <- drivers %>%
       dplyr::mutate(
         data = purrr::pmap(.,
-        	run_pmodel_f_bysite,
-            params_modl = par,
-            makecheck = makecheck
+                           run_pmodel_f_bysite,
+                           params_modl = par,
+                           makecheck = makecheck
         )
       ) |> 
       dplyr::select(sitename, site_info, data)

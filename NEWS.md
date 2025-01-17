@@ -1,3 +1,19 @@
+# rsofun (development version v5.1.0)
+
+* new BiomeE behavior to recycle last year of forcing if requested simulation time span (`nyeartrend`) is longer than 
+available forcing data
+* Breaking change: biomee drivers' `init_cohort$init_n_cohorts` column has been phased out and must not be present in  
+drivers to protect against data corruption.
+
+# rsofun v5.0.0
+
+* new BiomeE forcing data matching that of P-model
+  * `prec` is now called `rain`
+  * `rh` is now provided as `vpd`
+  * See `biomee_gs_leuning_drivers` for an example
+* fix Fortran modules leading to segmentation faults using BiomeE model
+* improved documentation
+
 # rsofun v4.4.1
 
 * bugfix Fortran modules and derived types

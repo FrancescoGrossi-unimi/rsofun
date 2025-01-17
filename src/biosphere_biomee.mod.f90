@@ -9,20 +9,18 @@ module md_biosphere_biomee
   use md_vegetation_biomee
   use md_soil_biomee
   use md_params_core
+  use md_soiltemp, only: air_to_soil_temp
   
   implicit none
   private
   public biosphere_annual
 
-  type(vegn_tile_type), pointer :: vegn   
-  ! type(soil_tile_type),  pointer :: soil
-  ! type(cohort_type),     pointer :: cx, cc
+  type(vegn_tile_type), pointer :: vegn
 
 contains
 
   subroutine biosphere_annual( &
     out_biosphere_daily_tile, &
-    ! out_biosphere_daily_cohorts, &
     out_biosphere_annual_tile, &
     out_biosphere_annual_cohorts &
     )
@@ -31,34 +29,24 @@ contains
     !----------------------------------------------------------------
     use md_interface_biomee, only: myinterface, &
       outtype_daily_tile, &
-      ! outtype_daily_cohorts, &
       outtype_annual_tile, &
       outtype_annual_cohorts
     use md_gpp_biomee, only: getpar_modl_gpp
+    use md_sofunutils, only: aggregate
 
     ! return variables
     type(outtype_daily_tile),     dimension(ndayyear)                , intent(out) :: out_biosphere_daily_tile
-    ! type(outtype_daily_cohorts),  dimension(ndayyear,out_max_cohorts), intent(out) :: out_biosphere_daily_cohorts
     type(outtype_annual_tile)                                        , intent(out) :: out_biosphere_annual_tile
     type(outtype_annual_cohorts), dimension(out_max_cohorts)         , intent(out) :: out_biosphere_annual_cohorts
 
     ! ! local variables
-    integer :: dm, moy, doy
-    logical, save :: init = .true.   ! is true only on the first day of the simulation 
-    ! logical, parameter :: verbose = .false.       ! change by hand for debugging etc.
-
-    !----------------------------------------------------------------
-    ! Biome-E stuff
-    !----------------------------------------------------------------
-    real    :: tsoil, soil_theta
-    integer :: year0
-    integer :: i
-    integer :: idata
-    !integer :: nfrequency ! disturbances
-    integer, save :: simu_steps !, datalines
-    integer, save :: iyears
-    integer, save :: idays
-    integer, save :: idoy
+    integer :: moy         ! Month of year
+    integer :: doy         ! Day of year
+    integer :: dayloop_idx, fastloop_idx, simu_steps
+    logical, save :: init  ! is true only on the first step of the simulation
+    real, dimension(ndayyear) :: daily_temp  ! Daily temperatures (average)
+    real    :: tsoil
+    integer, save :: iyears, idoy
 
     !----------------------------------------------------------------
     ! INITIALISATIONS
@@ -71,37 +59,36 @@ contains
       ! Initialize vegetation tile and plant cohorts
       allocate( vegn )
       call initialize_vegn_tile( vegn )
-      
-      ! Sort and relayer cohorts
-      call relayer_cohorts( vegn )
-
-      ! initialise outputs 
-      call Zero_diagnostics( vegn )
 
       ! module-specific parameter specification
       call getpar_modl_gpp()
 
-      year0  = myinterface%climate(1)%year  ! forcingData(1)%year
-
       iyears = 1
       idoy   = 0
-      idays  = 0
+      init = .true.
 
     endif
 
+    !---------------------------------------------
+    ! Reset diagnostics and counters
+    !---------------------------------------------
     simu_steps = 0
+    doy = 0
+    call Zero_diagnostics( vegn )
+
+    ! Compute averaged daily temperatures
+    call aggregate(daily_temp, myinterface%climate(:)%Tair, myinterface%steps_per_day)
 
     !----------------------------------------------------------------
     ! LOOP THROUGH MONTHS
     !----------------------------------------------------------------
-    doy = 0
     monthloop: do moy=1,nmonth
 
       !----------------------------------------------------------------
       ! LOOP THROUGH DAYS
       !----------------------------------------------------------------
-      dayloop: do dm=1,ndaymonth(moy)
-        
+      dayloop: do dayloop_idx=1,ndaymonth(moy)
+
         doy = doy + 1
         idoy = idoy + 1
 
@@ -109,26 +96,32 @@ contains
         ! print*,'YEAR, DOY ', myinterface%steering%year, doy
         ! print*,'----------------------'
 
+        ! The algorithm for computing soil temp from air temp works with a daily period.
+        ! vegn%wcl(2) is updated in the fast loop, but not much so it is ok to use
+        ! the last value of the previous day for computing the daily soil temperature.
+        vegn%thetaS  = (vegn%wcl(2) - WILTPT) / (FLDCAP - WILTPT)
+        tsoil = air_to_soil_temp(vegn%thetaS, &
+                daily_temp - kTkelvin, &
+                doy, &
+                myinterface%steering%init, &
+                myinterface%steering%finalize &
+                ) + kTkelvin
+
         !----------------------------------------------------------------
         ! FAST TIME STEP
         !----------------------------------------------------------------
         ! get daily mean temperature from hourly/half-hourly data
-        vegn%Tc_daily = 0.0
-        tsoil         = 0.0
-        fastloop: do i = 1,myinterface%steps_per_day
+        fastloop: do fastloop_idx = 1,myinterface%steps_per_day
 
-          idata         = simu_steps + 1
-          year0         = myinterface%climate(idata)%year  ! Current year
-          vegn%Tc_daily = vegn%Tc_daily + myinterface%climate(idata)%Tair
-          tsoil         = myinterface%climate(idata)%tsoil
           simu_steps    = simu_steps + 1
+          vegn%thetaS  = (vegn%wcl(2) - WILTPT) / (FLDCAP - WILTPT)
 
           !----------------------------------------------------------------
           ! Sub-daily time step at resolution given by forcing (can be 1 = daily)
           !----------------------------------------------------------------
-          call vegn_CNW_budget( vegn, myinterface%climate(idata), init )
+          call vegn_CNW_budget( vegn, myinterface%climate(simu_steps), init, tsoil )
          
-          call hourly_diagnostics( vegn, myinterface%climate(idata) )
+          call hourly_diagnostics( vegn, myinterface%climate(simu_steps) )
          
           init = .false.
          
@@ -139,9 +132,7 @@ contains
         !-------------------------------------------------
         ! Daily calls after fast loop
         !-------------------------------------------------
-        vegn%Tc_daily = vegn%Tc_daily / myinterface%steps_per_day
-        tsoil         = tsoil / myinterface%steps_per_day
-        soil_theta    = vegn%thetaS
+        vegn%Tc_daily = daily_temp(doy)
 
         ! sum over fast time steps and cohorts
         call daily_diagnostics( vegn, iyears, idoy, out_biosphere_daily_tile(doy)  )  ! , out_biosphere_daily_cohorts(doy,:)
@@ -169,8 +160,9 @@ contains
     ! because mortality and reproduction re-organize
     ! cohorts again and we want annual output and daily
     ! output to be consistent with cohort identities.
+    ! Note: Relayering happens in phenology leading to a reshuffling of the cohorts and affecting cohort identities.
     !---------------------------------------------
-    call annual_diagnostics( vegn, iyears, out_biosphere_annual_cohorts(:), out_biosphere_annual_tile )
+    call annual_diagnostics( vegn, iyears, out_biosphere_annual_cohorts, out_biosphere_annual_tile )
 
     !---------------------------------------------
     ! Reproduction and mortality
@@ -191,55 +183,96 @@ contains
     !---------------------------------------------
     call kill_lowdensity_cohorts( vegn )
 
-    call kill_old_grass( vegn ) 
+    call kill_old_grass( vegn )
     
     call relayer_cohorts( vegn )
     
     call vegn_mergecohorts( vegn )
 
     !---------------------------------------------
-    ! Set annual variables zero
+    ! Update post-mortality metrics
     !---------------------------------------------
-    call Zero_diagnostics( vegn )
+    call annual_diagnostics_post_mortality( vegn, out_biosphere_annual_cohorts, out_biosphere_annual_tile )
 
     ! update the years of model run
     iyears = iyears + 1
 
-    ! !---------------------------------------------
-    ! ! Reset vegetation to initial conditions
-    ! !---------------------------------------------
-
-    ! !if (iyears > myinterface%params_siml%spinupyears+31 .and. rand(0)<0.40) &
-    ! !     call reset_vegn_initial(vegn) ! 0.01, 0.02, 0.04, 0.08, 0.20, 0.40
-
-    ! !if (iyears == 700 .or. iyears == 800) &
-    ! !     call reset_vegn_initial(vegn) 
-
-    ! if(myinterface%params_siml%do_reset_veg) then
-
-    ! if (iyears==myinterface%params_siml%spinupyears + 31)  then
-    !   call reset_vegn_initial(vegn)
-    ! endif
-
-    ! ! nfrequency = 50 ! 100,75,50,25,15,10 
-
-    ! if(myinterface%params_siml%dist_frequency > 0) then
-    !     do i = myinterface%params_siml%spinupyears + 31 + myinterface%params_siml%dist_frequency, &
-    !     myinterface%params_siml%spinupyears + myinterface%params_siml%nyeartrend, &
-    !     myinterface%params_siml%dist_frequency
-    !   if (iyears == i) call reset_vegn_initial(vegn)
-    ! enddo
-    ! endif
-
-    ! endif
-
     !----------------------------------------------------------------
     ! Finalize run: deallocating memory
     !----------------------------------------------------------------
-    if (myinterface%steering%finalize) then  
+    if (myinterface%steering%finalize) then
       deallocate(vegn)
     end if
     
   end subroutine biosphere_annual
 
+  subroutine initialize_PFT_data()
+
+    ! ---- local vars ------
+    integer :: i
+
+    associate(spdata => myinterface%params_species)
+
+      spdata%prob_g        = 1.0
+      spdata%prob_e        = 1.0
+
+      spdata%underLAImax = spdata%LAImax
+
+      ! specific root area
+      spdata%SRA           = 2.0/(spdata%root_r*spdata%rho_FR)
+
+      ! calculate alphaBM parameter of allometry. note that rho_wood was re-introduced for this calculation
+      spdata%alphaBM = spdata%rho_wood * spdata%taperfactor * PI/4. * spdata%alphaHT ! 5200
+
+      ! Vmax as a function of LNbase
+      spdata%Vmax = 0.02 * spdata%LNbase ! 0.03125 * sp%LNbase ! Vmax/LNbase= 25E-6/0.8E-3 = 0.03125 !
+
+      ! CN0 of leaves
+      spdata%LNA     = spdata%LNbase +  spdata%LMA/spdata%CNleafsupport
+      spdata%CNleaf0 = spdata%LMA/spdata%LNA
+      ! Leaf life span as a function of LMA
+      spdata%leafLS = c_LLS * spdata%LMA
+
+      do i = 1, size(spdata)
+        call init_derived_species_data(spdata(i))
+      enddo
+
+    end associate
+
+  end subroutine initialize_pft_data
+
+
+  subroutine init_derived_species_data(sp)
+
+    type(spec_data_type), intent(inout) :: sp
+
+    ! ---- local vars ------
+    integer :: j
+    real :: rdepth(0:MAX_LEVELS)
+    real :: residual
+
+    ! root vertical profile
+    rdepth=0.0
+    do j=1,MAX_LEVELS
+      rdepth(j) = rdepth(j-1)+thksl(j)
+      sp%root_frac(j) = exp(-rdepth(j-1)/sp%root_zeta)- &
+              exp(-rdepth(j)  /sp%root_zeta)
+    enddo
+    residual = exp(-rdepth(MAX_LEVELS)/sp%root_zeta)
+    do j=1,MAX_LEVELS
+      sp%root_frac(j) = sp%root_frac(j) + residual*thksl(j)/rdepth(MAX_LEVELS)
+    enddo
+
+    if(sp%leafLS>1.0)then
+      sp%phenotype = 1
+    else
+      sp%phenotype = 0
+    endif
+
+    ! Leaf turnover rate, (leaf longevity as a function of LMA)
+    sp%alpha_L = 1.0/sp%leafLS * sp%phenotype
+
+  end subroutine init_derived_species_data
+
 end module md_biosphere_biomee
+
